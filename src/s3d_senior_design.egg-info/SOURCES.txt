@@ -33,6 +33,7 @@ src/stc/optimize/size_loop.py
 src/stc/orbit/cases.py
 src/stc/orbit/environment.py
 src/stc/orbit/heat_flux.py
+src/stc/utils/trace.py
 tests/test_pressure_drop.py
 tests/test_radiator_area.py
 tests/test_units.py
