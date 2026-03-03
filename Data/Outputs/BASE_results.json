@@ -1,0 +1,50 @@
+{
+  "case_id": "BASE",
+  "Qin_total_W": NaN,
+  "m_dot_kg_s": NaN,
+  "dp_total_kPa": NaN,
+  "coldplate": {
+    "m_dot_kg_s": NaN,
+    "V_dot_m3_s": NaN,
+    "v_channel_m_s": NaN,
+    "Re": NaN,
+    "Pr": 29.555555555555557,
+    "Nu": NaN,
+    "h_W_m2K": NaN,
+    "dp_kPa": NaN,
+    "dT_coolant_K": NaN,
+    "R_conv_K_W": NaN,
+    "R_plate_K_W": NaN,
+    "R_contact_K_W": NaN,
+    "R_total_K_W": NaN
+  },
+  "lines": {
+    "v_m_s": NaN,
+    "Re": NaN,
+    "f": NaN,
+    "dp_kPa": NaN,
+    "dp_fric_kPa": NaN,
+    "dp_minor_kPa": NaN
+  },
+  "pump": {
+    "dp_kPa_required": NaN,
+    "V_dot_m3_s": NaN,
+    "P_hyd_W": NaN,
+    "P_elec_W": NaN,
+    "within_power_limit": false
+  },
+  "radiator": {
+    "A_req_m2": Infinity,
+    "A_used_m2": 0.25,
+    "Q_reject_W": -34.83496583314512,
+    "T_rad_K": 308.15,
+    "feasible_with_Amax": false
+  },
+  "accumulator": {
+    "dV_expand_cc": 0.0,
+    "V_gas_min_cc": 0.0,
+    "V_gas_max_cc": 0.0,
+    "V_accumulator_cc": 0.0,
+    "notes": "Prelim: Vacc includes 20% margin; refine with dead volume + architecture specifics."
+  }
+}
