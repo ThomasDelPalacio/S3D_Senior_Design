@@ -2,7 +2,6 @@ from __future__ import annotations
 from pathlib import Path
 import json
 from dataclasses import asdict, is_dataclass
-
 from stc.io.load_excel import load_case, Paths
 from stc.loop.solver import solve_case
 

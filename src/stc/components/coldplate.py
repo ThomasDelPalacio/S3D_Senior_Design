@@ -107,7 +107,7 @@ class ColdPlate:
     def __init__(self, inp: ColdPlateInputs):
         self.inp = inp
 
-    def evaluate(self, Qin_W: float, m_dot_kg_s: float, rho: float, cp: float, mu: float, k: float) -> ColdPlateResult:
+    def evaluate(self, Qin_W: float, m_dot_kg_s: float, rho: float, cp: float, mu: float, k: float):
         i = self.inp
         n = max(int(i.n_channels), 1)
 
