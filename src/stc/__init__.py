@@ -4,8 +4,6 @@
 #                                                                        #
 ##########################################################################
 
-# src/stc/__init__.py
-
 from .components import (
     ColdPlate, ColdPlateInputs, ColdPlateResult,
     Lines, LinesInputs, LinesResult,
