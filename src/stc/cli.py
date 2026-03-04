@@ -5,6 +5,10 @@ from dataclasses import asdict, is_dataclass
 from stc.io.load_excel import load_case, Paths
 from stc.loop.solver import solve_case
 
+##################################################
+##               Run Model Here                 ##
+##################################################
+
 def _to_jsonable(x):
     if is_dataclass(x):
         return asdict(x)
@@ -13,7 +17,7 @@ def _to_jsonable(x):
     return x
 
 def main():
-    root = Path(__file__).resolve().parents[2]  # .../src/stc/cli.py -> repo root
+    root = Path(__file__).resolve().parents[2]
     baseline = root / "Data" / "Inputs" / "baseline_inputs.xlsx"
     fluids = root / "Data" / "Inputs" / "fluids.xlsx"
 

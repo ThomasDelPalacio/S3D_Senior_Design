@@ -3,16 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
-SIGMA = 5.670374419e-8  # W/m^2/K^4
+SIGMA = 5.670374419e-8  # W/m^2/K^4 | Stefan–Boltzmann Constant
+
+##################################################
+##              Data Containers                 ##
+##################################################
 
 @dataclass(frozen=True)
 class RadiatorInputs:
     epsilon: float
     alpha: float
     view_factor: float          # 0-1 effective view to space
-    A_max_m2: float | None      # geometric constraint (optional)
+    A_max_m2: float | None      # geometric constraint
 
-    # Environment flux assumptions for the case (prelim)
+    # Environment flux assumptions for the case 
     q_solar_W_m2: float         # incident solar on radiator
     q_albedo_W_m2: float        # reflected solar component
     q_ir_W_m2: float            # Earth IR on radiator
@@ -25,6 +29,10 @@ class RadiatorResult:
     T_rad_K: float
     feasible_with_Amax: bool
 
+##################################################
+##               Radiator Model                 ##
+##################################################
+
 class Radiator:
     """
     First-pass radiator sizing using steady radiation balance:
@@ -35,7 +43,7 @@ class Radiator:
     def __init__(self, inp: RadiatorInputs):
         self.inp = inp
 
-    def area_required(self, Q_W: float, T_rad_C: float, T_sink_K: float) -> RadiatorResult:
+    def area_required(self, Q_W: float, T_rad_C: float, T_sink_K: float):
         i = self.inp
         eps = max(min(i.epsilon, 1.0), 1e-6)
         alp = max(min(i.alpha, 1.0), 0.0)

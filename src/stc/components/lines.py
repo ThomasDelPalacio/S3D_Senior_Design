@@ -3,10 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+##################################################
+##        Helper Functions for Lines Cals       ##
+##################################################
+
 def friction_factor_turbulent(Re: float, rel_rough: float) -> float:
     Re = max(Re, 1e-9)
     rr = max(rel_rough, 1e-12)
     return 0.25 / (math.log10(rr/3.7 + 5.74/(Re**0.9)))**2
+
+##################################################
+##              Data Containers                 ##
+##################################################
 
 @dataclass(frozen=True)
 class LinesInputs:
@@ -25,6 +33,10 @@ class LinesResult:
     dp_fric_kPa: float
     dp_minor_kPa: float
 
+##################################################
+##                Lines Model                   ##
+##################################################
+
 class Lines:
     """
     First-pass line model:
@@ -35,7 +47,7 @@ class Lines:
     def __init__(self, inp: LinesInputs):
         self.inp = inp
 
-    def evaluate(self, V_dot_m3_s: float, rho: float, mu: float) -> LinesResult:
+    def evaluate(self, V_dot_m3_s: float, rho: float, mu: float):
         i = self.inp
         A = math.pi * (i.ID_m**2) / 4.0
         v = V_dot_m3_s / max(A, 1e-12)

@@ -1,8 +1,6 @@
 # src/stc/loop/solver.py
 from __future__ import annotations
-
 from dataclasses import dataclass
-
 from stc.components import (
     ColdPlate, ColdPlateInputs,
     Lines, LinesInputs,
@@ -10,6 +8,10 @@ from stc.components import (
     Radiator, RadiatorInputs,
     Accumulator, AccumulatorInputs,
 )
+
+##################################################
+##              Data Containers                 ##
+##################################################
 
 @dataclass(frozen=True)
 class SolveResult:
@@ -23,21 +25,23 @@ class SolveResult:
     radiator: object
     accumulator: object | None = None
 
+##################################################
+##              Solver Function                 ##
+##################################################
 
-def solve_case(case: dict) -> SolveResult:
+def solve_case(case: dict):
     """
     Solve one steady-state mechanically pumped single-phase loop case.
-
     `case` is the dict produced by stc.io.load_excel.load_case().
     """
     cid = str(case["case_id"])
 
-    # --- Total heat input (sum loads * duty_cycle) ---
+    # Total heat input (sum loads * duty_cycle)
     Qin_total = 0.0
     for r in case["loads"]:
         Qin_total += float(r["Qin_W"]) * float(r.get("duty_cycle", 1.0))
 
-    # --- Fluid properties (constants for prelim sizing) ---
+    # Fluid properties (constants for prelim sizing)
     f = case["fluid"]
     rho = float(f["rho_kg_m3"])
     cp = float(f["cp_J_kgK"])
@@ -45,16 +49,16 @@ def solve_case(case: dict) -> SolveResult:
     k  = float(f["k_W_mK"])
     beta = float(f.get("beta_1_K", 0.0))
 
-    # --- Temperature targets ---
+    # Temperature targets 
     tt = case["temp_targets"]
     dT_loop = float(tt["dT_loop_C"])  # K increment
     T_rad_C = float(tt.get("T_radiator_guess_C", 35.0))
     T_sink_K = float(case["mission"].get("sink_temp_K", 3.0))
 
-    # --- Mass flow from energy balance: m_dot = Q/(cp*dT) ---
+    # Mass flow from energy balance: m_dot = Q/(cp*dT)
     m_dot = Qin_total / max(cp * dT_loop, 1e-12)
 
-    # --- Cold plate inputs ---
+    # Cold plate inputs
     cp_row = case["coldplate"]
 
     # Geometry selection: if explicit channel_w_mm/channel_h_mm exists, use it;
@@ -76,7 +80,7 @@ def solve_case(case: dict) -> SolveResult:
     else:
         interface_area_m2 = float(case["loads"][0].get("interface_area_m2", 0.0025))
 
-    # New topology/distribution/spreading fields (with safe defaults)
+    # New topology/distribution/spreading fields
     flow_mode = str(cp_row.get("flow_mode", "parallel")).strip().lower()
     flow_split_model = str(cp_row.get("flow_split_model", "ideal")).strip().lower()
     spreading_model = str(cp_row.get("spreading_model", "none")).strip().lower()
@@ -105,7 +109,6 @@ def solve_case(case: dict) -> SolveResult:
         interface_h_W_m2K=float(cp_row.get("interface_h_W_m2K", 5000.0)),
         interface_area_m2=interface_area_m2,
 
-        # New features
         flow_mode=flow_mode,
         n_passes_serpentine=n_passes_serpentine,
         flow_split_model=flow_split_model,
@@ -118,7 +121,7 @@ def solve_case(case: dict) -> SolveResult:
         source_to_channels_t_m=source_to_channels_t_m,
     )
 
-    # --- Lines inputs ---
+    # Lines inputs
     ln = case["lines"]
     ID_mm = float(ln.get("line_ID_mm", ln.get("line_ID_mm_min", 4.0)))
     lines_in = LinesInputs(
@@ -129,7 +132,7 @@ def solve_case(case: dict) -> SolveResult:
         allow_dp_kPa=float(ln.get("allow_dp_kPa", 1e9)),
     )
 
-    # --- Pump inputs ---
+    # Pump inputs
     pp = case["pump"]
     pump_in = PumpInputs(
         efficiency=float(pp.get("pump_efficiency", 0.25)),
@@ -138,7 +141,7 @@ def solve_case(case: dict) -> SolveResult:
         else None,
     )
 
-    # --- Radiator inputs ---
+    # Radiator inputs
     rd = case["radiator"]
     rad_in = RadiatorInputs(
         epsilon=float(rd["epsilon"]),
@@ -152,7 +155,7 @@ def solve_case(case: dict) -> SolveResult:
         q_ir_W_m2=float(rd.get("q_ir_W_m2", 240.0)),
     )
 
-    # --- Evaluate components ---
+    # Evaluate components
     cp_model = ColdPlate(coldplate_in)
     cp_res = cp_model.evaluate(Qin_W=Qin_total, m_dot_kg_s=m_dot, rho=rho, cp=cp, mu=mu, k=k)
 
@@ -167,7 +170,7 @@ def solve_case(case: dict) -> SolveResult:
     rad_model = Radiator(rad_in)
     rad_res = rad_model.area_required(Q_W=Qin_total, T_rad_C=T_rad_C, T_sink_K=T_sink_K)
 
-    # --- Optional accumulator ---
+    # Acumulator 
     acc_res = None
     acc_list = case.get("accumulator", [])
     if isinstance(acc_list, list) and len(acc_list) > 0:

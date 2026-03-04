@@ -2,9 +2,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
+##################################################
+##              Data Containers                 ##
+##################################################
+
 @dataclass(frozen=True)
 class AccumulatorInputs:
-    # Liquid inventory in the loop (estimate early); used for expansion sizing
+    # Liquid inventory in the loop; used for expansion sizing
     V_liquid_cc: float
 
     # Fluid volumetric thermal expansion coefficient (1/K)
@@ -27,21 +31,25 @@ class AccumulatorResult:
     V_accumulator_cc: float
     notes: str
 
+##################################################
+##              Accumulator Model               ##
+##################################################
+
 class Accumulator:
     """
     First-pass accumulator sizing:
-    1) Liquid expansion: ΔV = V_liq * beta * ΔT
-    2) Gas compression: P*V^n = constant (polytropic)
+        1) Liquid expansion: ΔV = V_liq * beta * ΔT
+        2) Gas compression: P*V^n = constant (polytropic)
     Need enough gas volume swing to absorb ΔV while keeping P within [Pmin, Pmax].
 
-    This is a prelim model; once you pick an accumulator architecture (bladder/bellows),
-    you’ll add dead volumes, gas solubility, and dynamic effects.
+    This is a prelim model; once picked accumulator architecture (bladder/bellows),
+    add dead volumes, gas solubility, and dynamic effects.
     """
 
     def __init__(self, inp: AccumulatorInputs):
         self.inp = inp
 
-    def size(self) -> AccumulatorResult:
+    def size(self):
         i = self.inp
         Vliq = max(i.V_liquid_cc, 1e-9)
         beta = max(i.beta_1_K, 0.0)
@@ -53,18 +61,18 @@ class Accumulator:
         n = max(i.polytropic_n, 1e-6)
 
         # Define:
-        # At minimum system pressure P_min, gas volume is maximum: V_gas_max
-        # At maximum system pressure P_max, gas volume is minimum: V_gas_min
-        # And: V_gas_max - V_gas_min >= dV (must absorb expansion)
+            # At minimum system pressure P_min, gas volume is maximum: V_gas_max
+            # At maximum system pressure P_max, gas volume is minimum: V_gas_min
+            # And: V_gas_max - V_gas_min >= dV (must absorb expansion)
         Pmin = max(i.P_min_kPa, 1e-9)
         Pmax = max(i.P_max_kPa, Pmin + 1e-6)
         P0 = max(i.P_precharge_kPa, 1e-9)
 
         # Choose V_gas_max based on precharge and minimum pressure:
-        # P0 * V0^n = Pmin * V_gas_max^n
+            # P0 * V0^n = Pmin * V_gas_max^n
         # Without V0 known, we solve by selecting V_gas_max such that volume swing equals dV.
         # Use relation between V_gas_min and V_gas_max:
-        # Pmin*Vmax^n = Pmax*Vmin^n => Vmin = Vmax*(Pmin/Pmax)^(1/n)
+            # Pmin*Vmax^n = Pmax*Vmin^n => Vmin = Vmax*(Pmin/Pmax)^(1/n)
         ratio = (Pmin / Pmax) ** (1.0 / n)
         # Vmax - Vmin = Vmax*(1 - ratio) >= dV  => Vmax >= dV/(1-ratio)
         denom = max(1.0 - ratio, 1e-9)

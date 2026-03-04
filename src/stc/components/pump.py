@@ -2,6 +2,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
+##################################################
+##              Data Containers                 ##
+##################################################
+
 @dataclass(frozen=True)
 class PumpInputs:
     efficiency: float          # electrical-to-hydraulic (0-1)
@@ -15,17 +19,21 @@ class PumpResult:
     P_elec_W: float
     within_power_limit: bool
 
+##################################################
+##                 Pump Model                   ##
+##################################################
+
 class Pump:
     """
     First-pass pump sizing:
-    - Hydraulic power: P_hyd = Δp * Vdot
-    - Electrical power: P_elec = P_hyd / η
+        - Hydraulic power: P_hyd = Δp * Vdot
+        - Electrical power: P_elec = P_hyd / η
     """
 
     def __init__(self, inp: PumpInputs):
         self.inp = inp
 
-    def evaluate(self, dp_total_kPa: float, V_dot_m3_s: float) -> PumpResult:
+    def evaluate(self, dp_total_kPa: float, V_dot_m3_s: float):
         i = self.inp
         dp_Pa = dp_total_kPa * 1000.0
         P_hyd = dp_Pa * V_dot_m3_s
