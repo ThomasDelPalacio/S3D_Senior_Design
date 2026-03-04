@@ -1,11 +1,16 @@
+# path | src/stc/io/load_excel.py
+from __future__ import annotations
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+import pandas as pd
+
+##################################################
+##              Load Excel File                 ##
+##################################################
+
 """
-load_excel.py
-
-Read baseline_inputs.xlsx (multi-sheet) and return a nested dict for one case_id.
-
-This version is BACKWARD COMPATIBLE:
-- If newer Cold Plate columns are missing, defaults are applied.
-- Keeps your existing required sheets + column checks.
+Read baseline_inputs.xlsx and return a nested dict for one case_id.
 
 Usage:
     from pathlib import Path
@@ -14,48 +19,35 @@ Usage:
     data = load_case(Paths(baseline_xlsx=Path("baseline_inputs.xlsx")), case_id="BASE")
 """
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
-
-import pandas as pd
-
 REQUIRED_SHEETS_BASELINE = [
     "MISSION", "LOADS", "TEMP_TARGETS", "FLUID",
     "COLD_PLATE", "LINES_FITTINGS", "PUMP", "RADIATOR"
 ]
 
-# --- Defaults for new Cold Plate features (safe + non-breaking) ---
+# In case excel values are missing
 COLDPLATE_DEFAULTS: dict[str, Any] = {
-    # Topology / distribution
     "flow_mode": "parallel",               # "parallel" or "serpentine"
     "n_passes_serpentine": 1,              # used only for serpentine
     "flow_split_model": "ideal",           # "ideal" or "simple_maldistribution"
     "maldistribution_factor": 1.0,         # >= 1.0
-
-    # Spreading resistance inputs (mm in Excel; conversions happen elsewhere)
+  
     "spreading_model": "none",             # "none" or "simple"
     "source_w_mm": 0.0,
     "source_l_mm": 0.0,
     "sink_w_mm": 0.0,
     "sink_l_mm": 0.0,
-    "source_to_channels_t_mm": 0.0,        # 0 => default to base_thickness_mm in your model layer
+    "source_to_channels_t_mm": 0.0,       
 
-    # Recommended physics knobs (if you add them to Excel)
-    # If not present, these defaults prevent crashes but may make results less meaningful.
     "K_minor_total": 0.0,                  # additional minor losses across cold plate
     "interface_h_W_m2K": 5000.0,           # rough placeholder for TIM/contact (tune this!)
     "interface_area_mm2": 0.0,             # IMPORTANT: set this in Excel for meaningful temps
     "plate_k_W_mK": float("nan"),          # can be set from material mapping elsewhere if desired
 }
 
-# Optional: define required columns for specific sheets (beyond case_id)
 # Keep minimal to avoid breaking existing files.
 REQUIRED_COLS_BY_SHEET: dict[str, list[str]] = {
     "LOADS": ["case_id", "Qin_W"],
-    "COLD_PLATE": ["case_id"],  # we apply defaults for missing optional cols
+    "COLD_PLATE": ["case_id"],  
     "MISSION": ["case_id"],
     "TEMP_TARGETS": ["case_id"],
     "FLUID": ["case_id"],
@@ -64,6 +56,9 @@ REQUIRED_COLS_BY_SHEET: dict[str, list[str]] = {
     "RADIATOR": ["case_id"],
 }
 
+##################################################
+##           Define Data Container              ##
+##################################################
 
 @dataclass(frozen=True)
 class Paths:
@@ -71,13 +66,12 @@ class Paths:
     fluids_xlsx: Path | None = None
 
 
-def _require_columns(df: pd.DataFrame, required: list[str], sheet: str) -> None:
+def _require_columns(df: pd.DataFrame, required: list[str], sheet: str):
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"[{sheet}] Missing columns: {missing}")
 
-
-def _apply_defaults(row: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
+def _apply_defaults(row: dict[str, Any], defaults: dict[str, Any]):
     """Fill missing/NaN keys in row with defaults."""
     out = dict(row)
     for k, v in defaults.items():
@@ -85,14 +79,12 @@ def _apply_defaults(row: dict[str, Any], defaults: dict[str, Any]) -> dict[str, 
             out[k] = v
     return out
 
-
-def _norm_lower(x: Any, default: str) -> str:
+def _norm_lower(x: Any, default: str):
     if x is None or (isinstance(x, float) and pd.isna(x)):
         return default
     return str(x).strip().lower()
 
-
-def _to_int(x: Any, default: int) -> int:
+def _to_int(x: Any, default: int):
     try:
         if x is None or (isinstance(x, float) and pd.isna(x)):
             return default
@@ -100,8 +92,7 @@ def _to_int(x: Any, default: int) -> int:
     except Exception:
         return default
 
-
-def _to_float(x: Any, default: float) -> float:
+def _to_float(x: Any, default: float):
     try:
         if x is None or (isinstance(x, float) and pd.isna(x)):
             return default
@@ -109,24 +100,26 @@ def _to_float(x: Any, default: float) -> float:
     except Exception:
         return default
 
+##################################################
+##                 Load Case                    ##
+##################################################
 
 def load_case(paths: Paths, case_id: str = "BASE") -> dict[str, Any]:
     """
     Returns a nested dict with:
-      mission, loads, temp_targets, fluid, coldplate, lines, pump, radiator, accumulator(optional)
+      mission, loads, temp_targets, fluid, coldplate, lines, pump, radiator, accumulator
 
     Notes:
-    - COLD_PLATE sheet is upgraded with defaults for new columns.
     - FLUID_LIBRARY merge remains optional if fluids_xlsx is provided and FLUID has fluid_id.
     """
     base = pd.read_excel(paths.baseline_xlsx, sheet_name=None, engine="openpyxl")
 
-    # --- Check required sheets ---
+    # Check required sheets
     missing_sheets = [s for s in REQUIRED_SHEETS_BASELINE if s not in base]
     if missing_sheets:
         raise ValueError(f"baseline_inputs.xlsx missing sheets: {missing_sheets}")
 
-    # --- Helper to get one row by case_id ---
+    # Helper to get one row by case_id
     def one_row(sheet: str) -> pd.Series:
         df = base[sheet]
         # enforce minimal per-sheet required columns
@@ -141,12 +134,9 @@ def load_case(paths: Paths, case_id: str = "BASE") -> dict[str, Any]:
     mission = one_row("MISSION").to_dict()
     temp_targets = one_row("TEMP_TARGETS").to_dict()
     fluid_row = one_row("FLUID").to_dict()
-
-    # --- Cold plate: apply defaults + normalize new fields ---
     coldplate_raw = one_row("COLD_PLATE").to_dict()
-    coldplate = _apply_defaults(coldplate_raw, COLDPLATE_DEFAULTS)
+    coldplate = _apply_defaults(coldplate_raw, COLDPLATE_DEFAULTS) # Applies defaults to NaN values
 
-    # Normalize string modes
     coldplate["flow_mode"] = _norm_lower(coldplate.get("flow_mode"), "parallel")
     coldplate["flow_split_model"] = _norm_lower(coldplate.get("flow_split_model"), "ideal")
     coldplate["spreading_model"] = _norm_lower(coldplate.get("spreading_model"), "none")
@@ -155,7 +145,7 @@ def load_case(paths: Paths, case_id: str = "BASE") -> dict[str, Any]:
     coldplate["n_passes_serpentine"] = max(_to_int(coldplate.get("n_passes_serpentine"), 1), 1)
     coldplate["maldistribution_factor"] = max(_to_float(coldplate.get("maldistribution_factor"), 1.0), 1.0)
 
-    # Optional numeric conversions / safety casting
+    # Numeric conversions / safety casting
     for k in [
         "source_w_mm", "source_l_mm", "sink_w_mm", "sink_l_mm", "source_to_channels_t_mm",
         "K_minor_total", "interface_h_W_m2K", "interface_area_mm2", "plate_k_W_mK"
@@ -180,14 +170,14 @@ def load_case(paths: Paths, case_id: str = "BASE") -> dict[str, Any]:
     pump = one_row("PUMP").to_dict()
     radiator = one_row("RADIATOR").to_dict()
 
-    # --- Loads: multiple rows per case_id ---
+    # Loads: multiple rows per case_id
     loads_df = base["LOADS"]
     _require_columns(loads_df, REQUIRED_COLS_BY_SHEET["LOADS"], "LOADS")
     loads = loads_df[loads_df["case_id"] == case_id].copy()
     if loads.empty:
         raise ValueError(f"[LOADS] No loads found for case_id='{case_id}'")
 
-    # --- Optional: merge fluid properties from fluids.xlsx library ---
+    # Merge fluid properties from fluids.xlsx library
     if paths.fluids_xlsx and "fluid_id" in fluid_row and pd.notna(fluid_row["fluid_id"]):
         lib = pd.read_excel(paths.fluids_xlsx, sheet_name="FLUID_LIBRARY", engine="openpyxl")
         _require_columns(lib, ["fluid_id"], "FLUID_LIBRARY")
