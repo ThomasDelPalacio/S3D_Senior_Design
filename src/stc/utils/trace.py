@@ -4,22 +4,26 @@ from dataclasses import dataclass, field
 from typing import Any
 import math
 
+##################################################
+##            Error Tracking Func               ##
+##################################################
+
 @dataclass
 class TraceLog:
     messages: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
-    def info(self, msg: str) -> None:
+    def info(self, msg: str):
         self.messages.append(msg)
 
-    def warn(self, msg: str) -> None:
+    def warn(self, msg: str):
         self.warnings.append(msg)
 
-    def error(self, msg: str) -> None:
+    def error(self, msg: str):
         self.errors.append(msg)
 
-    def summarize(self) -> str:
+    def summarize(self):
         out = []
         if self.errors:
             out.append("ERRORS:")
@@ -32,13 +36,13 @@ class TraceLog:
             out += [f"  - {m}" for m in self.messages]
         return "\n".join(out) if out else "No trace messages."
 
-def is_bad(x: Any) -> bool:
+def is_bad(x: Any):
     try:
         return x is None or (isinstance(x, float) and math.isnan(x))
     except Exception:
         return True
 
-def require_number(x: Any, name: str, trace: TraceLog) -> float:
+def require_number(x: Any, name: str, trace: TraceLog):
     if is_bad(x):
         trace.error(f"Missing/NaN required value: {name}")
         return float("nan")
