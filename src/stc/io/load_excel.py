@@ -40,8 +40,19 @@ COLDPLATE_DEFAULTS: dict[str, Any] = {
 
     "K_minor_total": 0.0,                  # additional minor losses across cold plate
     "interface_h_W_m2K": 5000.0,           # rough placeholder for TIM/contact (tune this!)
-    "interface_area_mm2": 0.0,             # IMPORTANT: set this in Excel for meaningful temps
+    "interface_area_mm2": 0.0,             # Set  in Excel for meaningful temps
     "plate_k_W_mK": float("nan"),          # can be set from material mapping elsewhere if desired
+
+    "gpu_count": 0,                        # 0 disables footprint-driven sizing
+    "gpu_w_mm": 0.0,
+    "gpu_l_mm": 0.0,
+    "gpu_gap_mm": 0.0,                     # gap between GPUs if side-by-side/end-to-end
+    "gpu_arrangement": "side_by_side",     # "side_by_side" or "end_to_end"
+
+    "edge_margin_mm": 0.0,                 # margin around GPU footprint (per side)
+    "manifold_length_mm": 0.0,             # added to each end of plate length
+    "channel_pitch_mm": 0.0,               # center-to-center spacing across width
+    "channels_per_gpu": 0,                 # optional override (0 => compute from pitch)
 }
 
 # Keep minimal to avoid breaking existing files.
@@ -137,23 +148,31 @@ def load_case(paths: Paths, case_id: str = "BASE") -> dict[str, Any]:
     coldplate_raw = one_row("COLD_PLATE").to_dict()
     coldplate = _apply_defaults(coldplate_raw, COLDPLATE_DEFAULTS) # Applies defaults to NaN values
 
+    # Normilize keywords
     coldplate["flow_mode"] = _norm_lower(coldplate.get("flow_mode"), "parallel")
     coldplate["flow_split_model"] = _norm_lower(coldplate.get("flow_split_model"), "ideal")
     coldplate["spreading_model"] = _norm_lower(coldplate.get("spreading_model"), "none")
+    coldplate["gpu_arrangement"] = _norm_lower(coldplate.get("gpu_arrangement"), "side_by_side")
 
     # Cast + clamp numeric fields
     coldplate["n_passes_serpentine"] = max(_to_int(coldplate.get("n_passes_serpentine"), 1), 1)
     coldplate["maldistribution_factor"] = max(_to_float(coldplate.get("maldistribution_factor"), 1.0), 1.0)
 
+    # Sizing
+    coldplate["gpu_count"] = max(_to_int(coldplate.get("gpu_count"), 0), 0)
+    coldplate["channels_per_gpu"] = max(_to_int(coldplate.get("channels_per_gpu"), 0), 0)
+
     # Numeric conversions / safety casting
     for k in [
         "source_w_mm", "source_l_mm", "sink_w_mm", "sink_l_mm", "source_to_channels_t_mm",
-        "K_minor_total", "interface_h_W_m2K", "interface_area_mm2", "plate_k_W_mK"
+        "K_minor_total", "interface_h_W_m2K", "interface_area_mm2", "plate_k_W_mK",
+        "gpu_w_mm", "gpu_l_mm", "gpu_gap_mm",
+        "edge_margin_mm", "manifold_length_mm", "channel_pitch_mm",
     ]:
         if k in coldplate:
             coldplate[k] = _to_float(coldplate.get(k), COLDPLATE_DEFAULTS.get(k, 0.0))
 
-    # Normalize topology keywords
+    # Validate enums
     if coldplate["flow_mode"] not in ("parallel", "serpentine"):
         raise ValueError(f"[COLD_PLATE] flow_mode must be 'parallel' or 'serpentine' (got '{coldplate['flow_mode']}')")
 
@@ -166,6 +185,12 @@ def load_case(paths: Paths, case_id: str = "BASE") -> dict[str, Any]:
     if coldplate["spreading_model"] not in ("none", "simple"):
         raise ValueError(f"[COLD_PLATE] spreading_model must be 'none' or 'simple' (got '{coldplate['spreading_model']}')")
 
+    if coldplate["gpu_arrangement"] not in ("side_by_side", "end_to_end"):
+        raise ValueError(
+            f"[COLD_PLATE] gpu_arrangement must be 'side_by_side' or 'end_to_end' "
+            f"(got '{coldplate['gpu_arrangement']}')"
+        )
+    
     lines = one_row("LINES_FITTINGS").to_dict()
     pump = one_row("PUMP").to_dict()
     radiator = one_row("RADIATOR").to_dict()

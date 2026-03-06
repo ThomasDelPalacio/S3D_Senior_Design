@@ -1,0 +1,209 @@
+{
+  "meta": {
+    "case_id": "BASE",
+    "timestamp_utc": "2026-03-06T01:07:40.552493+00:00",
+    "version": "stc-dev",
+    "source_inputs": "C:\\Users\\thoma\\OneDrive\\Documents\\GitHub\\S3D_Senior_Design\\Data\\Inputs\\baseline_inputs.xlsx"
+  },
+  "inputs_used": {
+    "case_id": "BASE",
+    "mission": {
+      "case_id": "BASE",
+      "orbit_type": "LEO_SSO",
+      "altitude_km": 500,
+      "inclination_deg": 97.6,
+      "beta_deg": 0,
+      "eclipse_frac": 0.38,
+      "period_s": 5670,
+      "pointing_mode": "RAD_ANTI_SUN",
+      "sink_temp_K": 3
+    },
+    "temp_targets": {
+      "case_id": "BASE",
+      "T_coolant_in_C": 25,
+      "dT_coldplate_C": 8,
+      "dT_loop_C": 20,
+      "T_radiator_guess_C": 60,
+      "margin_C": 5
+    },
+    "loads": [
+      {
+        "case_id": "BASE",
+        "load_id": "GPU(2)",
+        "description": "NVIDIA Module",
+        "Qin_W": 800,
+        "duty_cycle": 1,
+        "interface_area_m2": 0.06,
+        "Tmax_C": 95,
+        "Tmin_C": -5
+      }
+    ],
+    "fluid": {
+      "case_id": "BASE",
+      "fluid_name": "PGW_30",
+      "rho_kg_m3": 1035,
+      "cp_J_kgK": 3800,
+      "mu_Pa_s": 0.0035,
+      "k_W_mK": 0.45,
+      "freeze_C": -12,
+      "max_bulk_C": 80
+    },
+    "coldplate": {
+      "case_id": "BASE",
+      "material": "AlSI10Mg",
+      "gpu_count": 2,
+      "gpu_w_mm": 112.0,
+      "gpu_l_mm": 267.0,
+      "gpu_arrangement": "side_by_side",
+      "edge_margin_mm": 15.0,
+      "channel_pitch_mm": 2.5,
+      "channels_per_gpu": 0,
+      "manifold_length_mm": 20.0,
+      "base_thickness_mm": 4,
+      "channel_count": 12,
+      "channel_length_mm": 300,
+      "w_mm_min": 1.5,
+      "w_mm_max": 3,
+      "h_mm_min": 1.5,
+      "h_mm_max": 3,
+      "roughness_um": 15,
+      "allow_dp_kPa": 20,
+      "flow_mode": "serpentine",
+      "n_passes_serpentine": 1,
+      "flow_split_model": "ideal",
+      "maldistribution_factor": 1.0,
+      "spreading_model": "none",
+      "source_w_mm": 0.0,
+      "source_l_mm": 0.0,
+      "sink_w_mm": 0.0,
+      "sink_l_mm": 0.0,
+      "source_to_channels_t_mm": 0.0,
+      "K_minor_total": 2.0,
+      "interface_h_W_m2K": 5000.0,
+      "interface_area_mm2": 60000.0,
+      "plate_k_W_mK": 170.0,
+      "gpu_gap_mm": 0.0
+    },
+    "lines": {
+      "case_id": "BASE",
+      "line_material": "SS316",
+      "line_length_m": 2.5,
+      "line_ID_mm_min": 6,
+      "line_ID_mm_max": 6,
+      "fitting_K_total": 8,
+      "elevation_m": 0,
+      "allow_dp_kPa": 15
+    },
+    "pump": {
+      "case_id": "BASE",
+      "pump_efficiency": 0.25,
+      "pump_power_limit_W": 40,
+      "redundancy": "SINGLE",
+      "allowable_NPSH_m": 0.5
+    },
+    "radiator": {
+      "case_id": "BASE",
+      "epsilon": 0.9,
+      "alpha": 0.15,
+      "A_max_m2": 6.5,
+      "view_factor": 0.95,
+      "q_solar_W_m2": 1361,
+      "q_albedo_W_m2": 200,
+      "q_ir_W_m2": 240
+    },
+    "accumulator": [
+      {
+        "case_id": "BASE",
+        "accumulator_type": "BLADDER",
+        "fluid_volume_cc_guess": 50,
+        "gas_precharge_kPa": 150,
+        "max_pressure_kPa": 400,
+        "min_pressure_kPa": 120
+      }
+    ]
+  },
+  "outputs": {
+    "case_id": "BASE",
+    "Qin_total_W": 800.0,
+    "m_dot_kg_s": 0.010526315789473684,
+    "dp_total_kPa": 39.33820548071234,
+    "coldplate": {
+      "m_dot_kg_s": 0.010526315789473684,
+      "V_dot_m3_s": 1.0170353419781338e-05,
+      "v_m_s": 4.520157075458372,
+      "Re": 2005.0125313283208,
+      "Pr": 29.555555555555557,
+      "Nu": 3.610224,
+      "h_W_m2K": 1083.0672,
+      "dp_kPa": 36.004859951292666,
+      "dT_coolant_K": 20.0,
+      "R_conv_K_W": 0.5181278020734952,
+      "R_plate_1D_K_W": 0.0003921568627450981,
+      "R_spread_K_W": 0.0,
+      "R_contact_K_W": 0.0033333333333333335,
+      "R_total_K_W": 0.5218532922695737,
+      "effective_n_channels": 1,
+      "limiting_m_dot_channel_kg_s": 0.010526315789473684,
+      "topology": "serpentine"
+    },
+    "lines": {
+      "v_m_s": 0.3597026710555027,
+      "Re": 638.215310644192,
+      "f": 0.10027963750258617,
+      "dp_kPa": 3.3333455294196765,
+      "dp_fric_kPa": 2.7976874415427986,
+      "dp_minor_kPa": 0.5356580878768775
+    },
+    "pump": {
+      "dp_kPa_required": 39.33820548071234,
+      "V_dot_m3_s": 1.0170353419781338e-05,
+      "P_hyd_W": 0.4000834526388237,
+      "P_elec_W": 1.6003338105552949,
+      "within_power_limit": true
+    },
+    "radiator": {
+      "A_req_m2": 6.500164039544963,
+      "A_used_m2": 6.5,
+      "Q_reject_W": 799.9798110270492,
+      "T_rad_K": 333.15,
+      "feasible_with_Amax": false
+    },
+    "accumulator": {
+      "dV_expand_cc": 0.0,
+      "V_gas_min_cc": 0.0,
+      "V_gas_max_cc": 0.0,
+      "V_accumulator_cc": 0.0,
+      "notes": "Prelim: Vacc includes 20% margin; refine with dead volume + architecture specifics."
+    }
+  },
+  "derived_design_params": {
+    "Qin_total_W": 800.0,
+    "m_dot_kg_s": 0.010526315789473684,
+    "V_dot_L_min": 0.6102212051868803,
+    "dp_total_kPa": 39.33820548071234,
+    "coolant_dT_C": 20.0,
+    "pump_required_head_m": 3.875730040399959,
+    "coldplate_geometry": {
+      "base_thickness_mm": 4.0,
+      "channel_count": 12,
+      "channel_length_mm": 300.0,
+      "channel_w_mm_used": 1.5,
+      "channel_h_mm_used": 1.5,
+      "Dh_mm": 1.5
+    },
+    "radiator_sizing": {
+      "T_rad_K": 333.15,
+      "A_req_m2": 6.500164039544963,
+      "A_used_m2": 6.5,
+      "Q_reject_W": 799.9798110270492,
+      "suggested_panel_dims_m": {
+        "w": 2.5495097567963922,
+        "h": 2.5495097567963922
+      }
+    }
+  },
+  "checks": {
+    "radiator_feasible": false,
+    "pump_within_power_limit": true
+  }
+}

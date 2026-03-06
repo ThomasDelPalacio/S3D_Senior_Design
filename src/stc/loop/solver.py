@@ -1,5 +1,6 @@
 # src/stc/loop/solver.py
 from __future__ import annotations
+import math
 from dataclasses import dataclass
 from stc.components import (
     ColdPlate, ColdPlateInputs,
@@ -61,24 +62,75 @@ def solve_case(case: dict):
     # Cold plate inputs
     cp_row = case["coldplate"]
 
-    # Geometry selection: if explicit channel_w_mm/channel_h_mm exists, use it;
-    # else fall back to min bounds (your sweep logic can override later).
+    # Choose channel size (mm -> m). Default uses min bounds unless explicit fields exist.
     if "channel_w_mm" in cp_row and cp_row["channel_w_mm"] == cp_row["channel_w_mm"]:
-        w_m = float(cp_row["channel_w_mm"]) / 1000.0
+        w_mm = float(cp_row["channel_w_mm"])
     else:
-        w_m = float(cp_row["w_mm_min"]) / 1000.0
+        w_mm = float(cp_row["w_mm_min"])
 
     if "channel_h_mm" in cp_row and cp_row["channel_h_mm"] == cp_row["channel_h_mm"]:
-        h_m = float(cp_row["channel_h_mm"]) / 1000.0
+        h_mm = float(cp_row["channel_h_mm"])
     else:
-        h_m = float(cp_row["h_mm_min"]) / 1000.0
+        h_mm = float(cp_row["h_mm_min"])
 
-    # Interface area: prefer cold plate sheet interface_area_mm2 if present and > 0.
-    # Fallback: loads[0].interface_area_m2 if your LOADS sheet includes it.
-    if "interface_area_mm2" in cp_row and cp_row["interface_area_mm2"] == cp_row["interface_area_mm2"] and float(cp_row["interface_area_mm2"]) > 0:
+    w_m = w_mm / 1000.0
+    h_m = h_mm / 1000.0
+
+    # Interface area (prefer cold plate sheet)
+    if (
+        "interface_area_mm2" in cp_row
+        and cp_row["interface_area_mm2"] == cp_row["interface_area_mm2"]
+        and float(cp_row["interface_area_mm2"]) > 0
+    ):
         interface_area_m2 = float(cp_row["interface_area_mm2"]) * 1e-6
     else:
-        interface_area_m2 = float(case["loads"][0].get("interface_area_m2", 0.0025))
+        # fallback: sum all load interface areas if present
+        interface_area_m2 = 0.0
+        for r in case["loads"]:
+            interface_area_m2 += float(r.get("interface_area_m2", 0.0))
+        if interface_area_m2 <= 0:
+            interface_area_m2 = 0.0025
+
+    # Fotprint-driven channel count and channel length
+    gpu_count = int(cp_row.get("gpu_count", 0) or 0)
+    gpu_w_mm = float(cp_row.get("gpu_w_mm", 0.0) or 0.0)
+    gpu_l_mm = float(cp_row.get("gpu_l_mm", 0.0) or 0.0)
+    gpu_gap_mm = float(cp_row.get("gpu_gap_mm", 0.0) or 0.0)
+    arrangement = str(cp_row.get("gpu_arrangement", "side_by_side")).strip().lower()
+
+    edge_margin_mm = float(cp_row.get("edge_margin_mm", 0.0) or 0.0)
+    manifold_len_mm = float(cp_row.get("manifold_length_mm", 0.0) or 0.0)
+    pitch_mm = float(cp_row.get("channel_pitch_mm", 0.0) or 0.0)
+    channels_per_gpu_override = int(cp_row.get("channels_per_gpu", 0) or 0)
+
+    # Defaults from sheet if footprint model not active
+    channel_count = int(cp_row.get("channel_count", 1))
+    channel_length_mm = float(cp_row.get("channel_length_mm", 0.0))
+
+    # Activate footprint sizing only when gpu_count and gpu dims are provided
+    if gpu_count > 0 and gpu_w_mm > 0 and gpu_l_mm > 0:
+        # Channel run length tied to GPU length + margins (no manifolds inside channel length)
+        channel_length_mm = gpu_l_mm + 2.0 * edge_margin_mm
+
+        # Compute channels_per_gpu
+        if channels_per_gpu_override > 0:
+            channels_per_gpu = channels_per_gpu_override
+        else:
+            # If pitch is provided, compute based on usable width
+            if pitch_mm > 0:
+                usable_w_mm = max(gpu_w_mm - 2.0 * edge_margin_mm, 0.0)
+                channels_per_gpu = int(math.floor(usable_w_mm / pitch_mm)) if usable_w_mm > 0 else 0
+            else:
+                channels_per_gpu = 0
+
+        # Total channel count depends on arrangement:
+        # - side_by_side: two banks in parallel under each GPU => N_total = gpu_count * channels_per_gpu
+        # - end_to_end: still typically two banks; keep same count model (banks repeat along length)
+        if channels_per_gpu > 0:
+            channel_count = max(gpu_count * channels_per_gpu, 1)
+
+    # Convert channel length to meters for the ColdPlateInputs
+    channel_length_m = channel_length_mm / 1000.0
 
     # New topology/distribution/spreading fields
     flow_mode = str(cp_row.get("flow_mode", "parallel")).strip().lower()
@@ -88,22 +140,22 @@ def solve_case(case: dict):
     n_passes_serpentine = max(int(cp_row.get("n_passes_serpentine", 1)), 1)
     maldistribution_factor = max(float(cp_row.get("maldistribution_factor", 1.0)), 1.0)
 
-    # Spreading dims (mm -> m). If missing/zero, coldplate model will disable spreading penalty.
+    # Spreading dims (mm -> m)
     source_w_m = float(cp_row.get("source_w_mm", 0.0)) / 1000.0
     source_l_m = float(cp_row.get("source_l_mm", 0.0)) / 1000.0
     sink_w_m   = float(cp_row.get("sink_w_mm", 0.0)) / 1000.0
     sink_l_m   = float(cp_row.get("sink_l_mm", 0.0)) / 1000.0
-
-    # Optional thickness from source plane to channels (mm -> m). If 0, model defaults to base thickness.
     source_to_channels_t_m = float(cp_row.get("source_to_channels_t_mm", 0.0)) / 1000.0
 
     coldplate_in = ColdPlateInputs(
         channel_w_m=w_m,
         channel_h_m=h_m,
-        channel_length_m=float(cp_row["channel_length_mm"]) / 1000.0,
-        n_channels=int(cp_row["channel_count"]),
+        channel_length_m=channel_length_m,
+        n_channels=channel_count,
+
         K_minor_total=float(cp_row.get("K_minor_total", 3.0)),
         roughness_m=float(cp_row["roughness_um"]) * 1e-6,
+
         base_thickness_m=float(cp_row["base_thickness_mm"]) / 1000.0,
         plate_k_W_mK=float(cp_row.get("plate_k_W_mK", 150.0)),
         interface_h_W_m2K=float(cp_row.get("interface_h_W_m2K", 5000.0)),
@@ -113,6 +165,7 @@ def solve_case(case: dict):
         n_passes_serpentine=n_passes_serpentine,
         flow_split_model=flow_split_model,
         maldistribution_factor=maldistribution_factor,
+
         spreading_model=spreading_model,
         source_w_m=source_w_m,
         source_l_m=source_l_m,

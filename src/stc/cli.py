@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict, is_dataclass
 from stc.io.load_excel import load_case, Paths
 from stc.loop.solver import solve_case
+from stc.export.design_packet import build_design_packet, write_design_packet
 
 ##################################################
 ##               Run Model Here                 ##
@@ -23,6 +24,17 @@ def main():
 
     case = load_case(Paths(baseline_xlsx=baseline, fluids_xlsx=fluids), case_id="BASE")
     res = solve_case(case)
+
+    reports_dir = root / "Data" / "Outputs" / "Cases_Reports"
+    packet = build_design_packet(
+        case=case,
+        res=res,
+        source_inputs_path=str(baseline),
+        version="stc-dev",
+    )
+    json_pkt, md_pkt = write_design_packet(packet, reports_dir)
+    print(f"Wrote design packet: {json_pkt}")
+    print(f"Wrote design packet: {md_pkt}")
 
     out_dir = root / "Data" / "Outputs"
     out_dir.mkdir(parents=True, exist_ok=True)
